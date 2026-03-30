@@ -9,4 +9,6 @@ export interface CountryFlagProps {
   placeholderColor?: string;
   /** Corner radius on the flag container. Defaults to 4 */
   borderRadius?: number;
+  /** Test ID */
+  testID?: string;
 }

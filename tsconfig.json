@@ -4,13 +4,13 @@
     "paths": {
       "react-native-cached-flags": ["./src/index"]
     },
+    "types": ["jest"], // For jest tests
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,
-    "customConditions": ["react-native-strict-api"],
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "jsx": "react-jsx",
-    "lib": ["ESNext"],
+    "lib": ["ESNext", "DOM"],
     "module": "ESNext",
     "moduleResolution": "bundler",
     "noEmit": true,
@@ -24,7 +24,6 @@
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "strict": true,
-    "target": "ESNext",
-    "verbatimModuleSyntax": true
+    "target": "ESNext"
   }
 }

@@ -41,6 +41,7 @@ export const CountryFlag = ({
   if (!svgXml) {
     return (
       <View
+        testID="flag-placeholder" // Add this for Jest
         style={[
           styles.placeholder,
           {

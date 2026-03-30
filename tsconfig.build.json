@@ -1,4 +1,14 @@
 {
   "extends": "./tsconfig",
-  "exclude": ["example", "lib"]
+  "compilerOptions": {
+    "types": [],
+    "noEmit": false
+  },
+  "exclude": [
+    "example",
+    "lib",
+    "**/__tests__/**",
+    "**/*.test.ts",
+    "**/*.test.tsx"
+  ]
 }

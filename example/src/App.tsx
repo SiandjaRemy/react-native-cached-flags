@@ -67,9 +67,10 @@ export default function App() {
   }, [mode]);
 
   const handleFlagPress = (code: string, name: string) => {
-    if (mode === 'svg') {
-      setFeaturedCountry({ code, name });
-    }
+    setFeaturedCountry({ code, name });
+    // if (mode === 'svg') {
+    //   setFeaturedCountry({ code, name });
+    // }
   };
 
   const handleModeChange = (modeName: Mode) => {
@@ -238,7 +239,7 @@ export default function App() {
               style={styles.card}
               onPress={() => handleFlagPress(c.code, c.name)}
               activeOpacity={mode === 'svg' ? 0.7 : 1}
-              disabled={mode !== 'svg'}
+              // disabled={mode !== 'svg'}
             >
               <View style={styles.flagWrap}>
                 <CountryFlag
