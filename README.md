@@ -5,8 +5,7 @@ React Native country flag component with emoji fallback and **persistent SVG cac
 Flags fetched as SVGs are saved to device storage — so the network is only hit
 once per flag, ever. Subsequent renders are instant, even after app restarts.
 
-![SVG Demo](./assets/cached-flags-svg-demo.jpg)
-![Emoji Demo](./assets/cached-flags-emoji-demo.jpg)
+![Demo](./assets/cached-flags-demo.jpg)
 
 ---
 
