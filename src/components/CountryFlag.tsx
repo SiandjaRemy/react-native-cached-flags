@@ -11,7 +11,7 @@ export const CountryFlag = ({
   size,
   useSvg = false,
   placeholderColor = '#E5E7EB',
-  borderRadius = 4,
+  borderRadius = 0,
 }: CountryFlagProps) => {
   const [svgXml, setSvgXml] = useState<string | null>(null);
 
