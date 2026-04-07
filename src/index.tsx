@@ -5,6 +5,7 @@ export {
   getCachedFlagsCount,
   getCacheSizeKB,
 } from './utils/cache';
+export { preloadFlags } from './utils/fetchFlag';
 export {
   getNetworkFetchCount,
   resetNetworkFetchCount,

@@ -20,6 +20,7 @@ import {
   getNetworkFetchCount,
   resetNetworkFetchCount,
 } from 'react-native-cached-flags';
+import VersionHeader from './components/VersionHeader';
 
 const COUNTRIES = [
   { code: 'US', name: 'United States' },
@@ -37,9 +38,6 @@ const COUNTRIES = [
 ];
 
 type Mode = 'emoji' | 'svg';
-
-// Get package version from package.json
-const PACKAGE_VERSION = require('../../package.json').version;
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 48 - 20) / 3; // 48 padding, 20 gap
@@ -126,10 +124,7 @@ export default function DemoOne() {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <View style={styles.pill}>
-            <View style={styles.pillDot} />
-            <Text style={styles.pillText}>v{PACKAGE_VERSION}</Text>
-          </View>
+          <VersionHeader />
         </View>
         <Text style={styles.title}>cached flags</Text>
         <Text style={styles.subtitle}>
@@ -233,9 +228,9 @@ export default function DemoOne() {
 
         {/* Grid */}
         <View style={styles.grid}>
-          {COUNTRIES.map((c) => (
+          {COUNTRIES.map((c, index) => (
             <TouchableOpacity
-              key={c.code}
+              key={index}
               style={styles.card}
               onPress={() => handleFlagPress(c.code, c.name)}
               activeOpacity={mode === 'svg' ? 0.7 : 1}

@@ -109,7 +109,7 @@ describe('SVG mode — success state', () => {
     mockFetchFlag.mockImplementation(successResult);
     render(<CountryFlag isoCode="US" size={32} useSvg aspectRatio="1:1" />);
     await waitFor(() =>
-      expect(mockFetchFlag).toHaveBeenCalledWith('us', '1:1')
+      expect(mockFetchFlag).toHaveBeenCalledWith('us', '1:1', undefined)
     );
   });
 
@@ -117,7 +117,7 @@ describe('SVG mode — success state', () => {
     mockFetchFlag.mockImplementation(successResult);
     render(<CountryFlag isoCode="FR" size={32} useSvg />);
     await waitFor(() =>
-      expect(mockFetchFlag).toHaveBeenCalledWith('fr', '4:3')
+      expect(mockFetchFlag).toHaveBeenCalledWith('fr', '4:3', undefined)
     );
   });
 
@@ -125,12 +125,12 @@ describe('SVG mode — success state', () => {
     mockFetchFlag.mockImplementation(successResult);
     const { rerender } = render(<CountryFlag isoCode="US" size={32} useSvg />);
     await waitFor(() =>
-      expect(mockFetchFlag).toHaveBeenCalledWith('us', '4:3')
+      expect(mockFetchFlag).toHaveBeenCalledWith('us', '4:3', undefined)
     );
 
     rerender(<CountryFlag isoCode="CM" size={32} useSvg />);
     await waitFor(() =>
-      expect(mockFetchFlag).toHaveBeenCalledWith('cm', '4:3')
+      expect(mockFetchFlag).toHaveBeenCalledWith('cm', '4:3', undefined)
     );
     expect(mockFetchFlag).toHaveBeenCalledTimes(2);
   });
@@ -141,14 +141,25 @@ describe('SVG mode — success state', () => {
       <CountryFlag isoCode="US" size={32} useSvg aspectRatio="4:3" />
     );
     await waitFor(() =>
-      expect(mockFetchFlag).toHaveBeenCalledWith('us', '4:3')
+      expect(mockFetchFlag).toHaveBeenCalledWith('us', '4:3', undefined)
     );
 
     rerender(<CountryFlag isoCode="US" size={32} useSvg aspectRatio="1:1" />);
     await waitFor(() =>
-      expect(mockFetchFlag).toHaveBeenCalledWith('us', '1:1')
+      expect(mockFetchFlag).toHaveBeenCalledWith('us', '1:1', undefined)
     );
     expect(mockFetchFlag).toHaveBeenCalledTimes(2);
+  });
+
+  it('calls onLoad when SVG is successfully fetched', async () => {
+    const onLoadSpy = jest.fn();
+    mockFetchFlag.mockResolvedValue({ type: 'success', svg: '<svg />' });
+
+    render(<CountryFlag isoCode="US" size={32} useSvg onLoad={onLoadSpy} />);
+
+    await waitFor(() => {
+      expect(onLoadSpy).toHaveBeenCalledTimes(1);
+    });
   });
 });
 

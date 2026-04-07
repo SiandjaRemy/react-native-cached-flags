@@ -20,6 +20,7 @@ import {
   getNetworkFetchCount,
   resetNetworkFetchCount,
 } from 'react-native-cached-flags';
+import VersionHeader from './components/VersionHeader';
 
 // ─── Data ──────────────────────────────────────────────────────────────────────
 
@@ -59,9 +60,6 @@ interface DisplayedFlag {
 
 const { width } = Dimensions.get('window');
 const CARD_W = (width - 48 - 10) / 2;
-// const PACKAGE_VERSION = require('../../package.json').version;
-const PACKAGE_VERSION =
-  require('react-native-cached-flags/package.json').version;
 
 // ─── Flag card ─────────────────────────────────────────────────────────────────
 
@@ -253,10 +251,7 @@ export default function DemoTwo() {
 
       {/* ── Header ── */}
       <View style={styles.header}>
-        <View style={styles.pill}>
-          <View style={styles.pillDot} />
-          <Text style={styles.pillText}>v{PACKAGE_VERSION} · cache SVG</Text>
-        </View>
+        <VersionHeader />
 
         <Text style={styles.title}>cache SVG</Text>
         <Text style={styles.subtitle}>
@@ -481,10 +476,11 @@ const styles = StyleSheet.create({
   statCell: { flex: 1, alignItems: 'center', gap: 3 },
   statDivider: { width: 1, backgroundColor: BORDER, marginVertical: 4 },
   statNum: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '800',
     color: ACCENT,
     letterSpacing: -0.5,
+    textAlign: 'center',
   },
   statWarn: { color: WARN },
   statGreen: { color: GREEN },

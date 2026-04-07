@@ -1,17 +1,59 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CACHE_KEY_PREFIX } from '../constants/defaults';
 
+// The new storage shape
+type CachePayload = {
+  svg: string;
+  timestamp: number;
+};
+
 export const getCachedFlag = async (
-  isoCode: string
+  isoCode: string,
+  ttlDays?: number
 ): Promise<string | null> => {
-  return AsyncStorage.getItem(`${CACHE_KEY_PREFIX}${isoCode}`);
+  const key = `${CACHE_KEY_PREFIX}${isoCode}`;
+  const cached = await AsyncStorage.getItem(key);
+
+  if (!cached) return null;
+
+  try {
+    // Attempt to parse new JSON format
+    const payload = JSON.parse(cached) as CachePayload;
+
+    if (ttlDays && ttlDays > 0) {
+      const now = Date.now();
+      const ageInMs = now - payload.timestamp;
+      const maxAgeMs = ttlDays * 24 * 60 * 60 * 1000;
+
+      if (ageInMs > maxAgeMs) {
+        await AsyncStorage.removeItem(key);
+        return null;
+      }
+    }
+    return payload.svg;
+  } catch (err) {
+    console.warn(
+      '[react-native-cached-flags] Legacy cache format detected, migrating:',
+      err
+    );
+    // Backward Compatibility: If parsing fails, it's a raw SVG string from v0.1.0
+    // We return it as-is. It will be updated to JSON next time it's saved.
+    return cached;
+  }
 };
 
 export const setCachedFlag = async (
   isoCode: string,
   svg: string
 ): Promise<void> => {
-  await AsyncStorage.setItem(`${CACHE_KEY_PREFIX}${isoCode}`, svg);
+  const payload: CachePayload = {
+    svg,
+    timestamp: Date.now(),
+  };
+  await AsyncStorage.setItem(
+    `${CACHE_KEY_PREFIX}${isoCode}`,
+    JSON.stringify(payload)
+  );
 };
 
 export const clearFlagCache = async (isoCode: string): Promise<void> => {

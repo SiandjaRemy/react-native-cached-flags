@@ -40,8 +40,8 @@
     "release": "release-it --only-version",
     "test": "jest",
     "lint": "eslint \"**/*.{js,ts,tsx}\"",
-    "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,json,md}\"",
-    "format:check": "prettier --check \"src/**/*.{js,jsx,ts,tsx,json,md}\""
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "keywords": [
     "react-native",

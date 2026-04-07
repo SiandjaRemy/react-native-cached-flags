@@ -14,45 +14,87 @@ export type FetchFlagResult =
   | { type: 'offline' }
   | { type: 'error'; svg: string };
 
+// ✅ Deduplication map — key: `${lowerCode}_${ratio}`, value: in-flight Promise
+const _inFlightRequests = new Map<string, Promise<FetchFlagResult>>();
+
 export const fetchFlag = async (
   lowerCode: string,
-  aspectRatio: AspectRatio = '4:3'
+  aspectRatio: AspectRatio = '4:3',
+  ttlDays?: number // The number of days the cache should be stored
 ): Promise<FetchFlagResult> => {
   // Ratio included in cache key so 4:3 and 1:1 are cached separately
   const cacheKey = `${lowerCode}_${aspectRatio.replace(':', 'x')}`;
-  const cached = await getCachedFlag(cacheKey);
-  if (cached) return { type: 'success', svg: cached }; // cache hit — counter NOT incremented
 
-  // Cache miss — actual network request
+  // 1. Cache hit — serve immediately
+  const cached = await getCachedFlag(cacheKey, ttlDays);
+  if (cached) return { type: 'success', svg: cached };
+
+  // 2. In-flight deduplication — if a fetch for this key is already running,
+  //    return the same promise so all callers share one network request
+  const inFlight = _inFlightRequests.get(cacheKey);
+  if (inFlight) return inFlight;
+
+  // 3. No cache, no in-flight request — start a new fetch
   _fetchCount++;
 
-  try {
-    const baseUrl = CDN_BASE_URLS[aspectRatio] ?? CDN_BASE_URLS['4:3'];
-    const res = await fetch(`${baseUrl}/${lowerCode}.svg`);
+  const fetchPromise = (async (): Promise<FetchFlagResult> => {
+    try {
+      const baseUrl = CDN_BASE_URLS[aspectRatio] ?? CDN_BASE_URLS['4:3'];
+      const res = await fetch(`${baseUrl}/${lowerCode}.svg`);
 
-    if (!res.ok) {
-      // Failures are not cached sinced users might come online later
-      console.warn(
-        `[react-native-cached-flags] HTTP ${res.status} for ${lowerCode}`
-      );
+      if (!res.ok) {
+        // Failures are not cached sinced users might come online later
+        console.warn(
+          `[react-native-cached-flags] HTTP ${res.status} for ${lowerCode}`
+        );
+        return { type: 'error', svg: DEFAULT_FLAG_SVG };
+      }
+
+      const text = await res.text();
+      await setCachedFlag(cacheKey, text);
+      return { type: 'success', svg: text };
+    } catch (err) {
+      // Network error — likely offline
+      const isOffline =
+        err instanceof TypeError &&
+        (err.message.includes('Network request failed') ||
+          err.message.includes('Failed to fetch'));
+
+      if (isOffline) return { type: 'offline' };
+
+      console.error('[react-native-cached-flags] Fetch error:', err);
       return { type: 'error', svg: DEFAULT_FLAG_SVG };
+    } finally {
+      // ✅ Always clean up — whether success, error or offline
+      _inFlightRequests.delete(cacheKey);
     }
+  })();
 
-    const text = await res.text();
-    await setCachedFlag(cacheKey, text);
-    return { type: 'success', svg: text };
-  } catch (err) {
-    // Network error — likely offline
-    const isOffline =
-      err instanceof TypeError &&
-      (err.message.includes('Network request failed') ||
-        err.message.includes('Failed to fetch'));
+  // Register in-flight before any await so subsequent calls see it immediately
+  _inFlightRequests.set(cacheKey, fetchPromise);
+  return fetchPromise;
+};
 
-    if (isOffline) {
-      return { type: 'offline' };
-    }
+// Expose for testing and demo
+export const getInFlightCount = () => _inFlightRequests.size;
 
-    console.error('[react-native-cached-flags] Fetch error:', err);
-    return { type: 'error', svg: DEFAULT_FLAG_SVG };
+// Warm the cache before rendering, useful for onboarding flows or country pickers
+export const preloadFlags = async (
+  isoCodes: string[],
+  options?: { aspectRatio?: AspectRatio; ttlDays?: number }
+): Promise<void> => {
+  const ratio = options?.aspectRatio ?? '4:3';
+  const ttl = options?.ttlDays;
+
+  const BATCH_SIZE = 10; // Prevent choking the network tab
+
+  // Process in chunks to maintain smooth app performance
+  for (let i = 0; i < isoCodes.length; i += BATCH_SIZE) {
+    const batch = isoCodes.slice(i, i + BATCH_SIZE);
+
+    // Use allSettled so one failure doesn't reject the whole batch
+    await Promise.allSettled(
+      batch.map((code) => fetchFlag(code.toLowerCase(), ratio, ttl))
+    );
   }
 };
