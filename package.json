@@ -39,7 +39,9 @@
     "typecheck": "tsc",
     "release": "release-it --only-version",
     "test": "jest",
-    "lint": "eslint \"**/*.{js,ts,tsx}\""
+    "lint": "eslint \"**/*.{js,ts,tsx}\"",
+    "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,json,md}\"",
+    "format:check": "prettier --check \"src/**/*.{js,jsx,ts,tsx,json,md}\""
   },
   "keywords": [
     "react-native",
@@ -99,10 +101,10 @@
     "typescript": "^5.9.2"
   },
   "peerDependencies": {
+    "react": ">=17.0.0",
+    "react-native": ">=0.68.0",
     "@react-native-async-storage/async-storage": ">=1.17.0",
-    "react": "*",
-    "react-native": "*",
-    "react-native-svg": ">=12.0.0"
+    "react-native-svg": ">=13.0.0"
   },
   "workspaces": [
     "example"

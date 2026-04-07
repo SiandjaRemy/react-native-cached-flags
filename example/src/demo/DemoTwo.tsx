@@ -377,7 +377,7 @@ export default function DemoTwo() {
           )}
         </View>
 
-        <View style={{ height: 48 }} />
+        <View style={styles.bottomSpacer} />
       </ScrollView>
     </View>
   );
@@ -601,4 +601,8 @@ const styles = StyleSheet.create({
     borderColor: BORDER,
   },
   allLoadedText: { color: GREEN, fontWeight: '600', fontSize: 13 },
+
+  // Others
+
+  bottomSpacer: { height: 48 },
 });
