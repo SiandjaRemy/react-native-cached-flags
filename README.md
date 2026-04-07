@@ -19,7 +19,7 @@ and request deduplication.
 Flags are fetched once, cached permanently to device storage, and deduplicated —
 so rendering 50 instances of the same flag triggers exactly **one** network request.
 
-![Demo](./assets/cached-flags-v1-demo.jpg.jpg)
+![Demo](./assets/cached-flags-v1-demo.jpg)
 
 ---
 
