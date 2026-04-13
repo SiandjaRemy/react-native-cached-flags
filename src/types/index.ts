@@ -19,6 +19,9 @@ export interface CountryFlagProps {
   /** Background color shown while SVG is loading. Defaults to #E5E7EB */
   placeholderColor?: string;
 
+  /** Skip cache read AND write (pure network every time) */
+  disableCache?: boolean;
+
   /**
    * Cache TTL (Time-To-Live) in days for cached flag SVGs.
    *

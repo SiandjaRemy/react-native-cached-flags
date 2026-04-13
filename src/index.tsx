@@ -1,6 +1,7 @@
 export { CountryFlag } from './components/CountryFlag';
 export {
   clearFlagCache,
+  clearAllFlagVariants,
   clearAllFlagCache,
   getCachedFlagsCount,
   getCacheSizeKB,
@@ -10,4 +11,10 @@ export {
   getNetworkFetchCount,
   resetNetworkFetchCount,
 } from './utils/fetchFlag';
+
+export { useCacheStats } from './hooks/useCacheStats';
+export type { CacheStats } from './hooks/useCacheStats';
+
+export { countryCodeToFlagEmoji, extractCountryCode } from './utils/emojiFlag';
+
 export type { CountryFlagProps } from './types';

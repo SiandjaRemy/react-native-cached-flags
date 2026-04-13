@@ -1,6 +1,6 @@
 import { CDN_BASE_URLS, DEFAULT_FLAG_SVG } from '../constants/defaults';
 import { AspectRatio } from '../types';
-import { getCachedFlag, setCachedFlag } from './cache';
+import { buildCacheKey, getCachedFlag, setCachedFlag } from './cache';
 // In-memory counter — resets on app restart, which is fine for demo purposes
 let _fetchCount = 0;
 
@@ -20,14 +20,17 @@ const _inFlightRequests = new Map<string, Promise<FetchFlagResult>>();
 export const fetchFlag = async (
   lowerCode: string,
   aspectRatio: AspectRatio = '4:3',
-  ttlDays?: number // The number of days the cache should be stored
+  ttlDays?: number, // The number of days the cache should be stored
+  disableCache?: boolean // When true, bypass cache and always fetch fresh
 ): Promise<FetchFlagResult> => {
   // Ratio included in cache key so 4:3 and 1:1 are cached separately
-  const cacheKey = `${lowerCode}_${aspectRatio.replace(':', 'x')}`;
+  const cacheKey = buildCacheKey(lowerCode, aspectRatio);
 
-  // 1. Cache hit — serve immediately
-  const cached = await getCachedFlag(cacheKey, ttlDays);
-  if (cached) return { type: 'success', svg: cached };
+  // 1. Cache hit — serve immediately (skip if cache is disabled)
+  if (!disableCache) {
+    const cached = await getCachedFlag(cacheKey, ttlDays);
+    if (cached) return { type: 'success', svg: cached };
+  }
 
   // 2. In-flight deduplication — if a fetch for this key is already running,
   //    return the same promise so all callers share one network request
@@ -51,7 +54,12 @@ export const fetchFlag = async (
       }
 
       const text = await res.text();
-      await setCachedFlag(cacheKey, text);
+
+      // Only cache if caching is enabled
+      if (!disableCache) {
+        await setCachedFlag(cacheKey, text);
+      }
+
       return { type: 'success', svg: text };
     } catch (err) {
       // Network error — likely offline
@@ -81,10 +89,15 @@ export const getInFlightCount = () => _inFlightRequests.size;
 // Warm the cache before rendering, useful for onboarding flows or country pickers
 export const preloadFlags = async (
   isoCodes: string[],
-  options?: { aspectRatio?: AspectRatio; ttlDays?: number }
+  options?: {
+    aspectRatio?: AspectRatio;
+    ttlDays?: number;
+    disableCache?: boolean;
+  }
 ): Promise<void> => {
   const ratio = options?.aspectRatio ?? '4:3';
   const ttl = options?.ttlDays;
+  const disableCache = options?.disableCache ?? false;
 
   const BATCH_SIZE = 10; // Prevent choking the network tab
 
@@ -94,7 +107,9 @@ export const preloadFlags = async (
 
     // Use allSettled so one failure doesn't reject the whole batch
     await Promise.allSettled(
-      batch.map((code) => fetchFlag(code.toLowerCase(), ratio, ttl))
+      batch.map((code) =>
+        fetchFlag(code.toLowerCase(), ratio, ttl, disableCache)
+      )
     );
   }
 };

@@ -176,8 +176,5 @@
       "eslint"
     ],
     "version": "0.57.2"
-  },
-  "dependencies": {
-    "country-code-to-flag-emoji": "^2.1.0"
   }
 }

@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { SvgXml } from 'react-native-svg';
-import countryCodeToFlagEmoji from 'country-code-to-flag-emoji';
 import { fetchFlag } from '../utils/fetchFlag';
 import { ASPECT_RATIOS, DEFAULT_FLAG_SVG } from '../constants/defaults';
 import type { CountryFlagProps } from '../types';
+import { countryCodeToFlagEmoji } from '../utils/emojiFlag';
 
 type SvgState =
   | { status: 'loading' }
@@ -20,6 +20,7 @@ export const CountryFlag = ({
   useFallbackEmoji = false,
   placeholderColor = '#E5E7EB',
   cacheTTLDays,
+  disableCache = false,
   borderRadius = 0,
   onLoad,
   onError,
@@ -87,32 +88,34 @@ export const CountryFlag = ({
       return;
     }
 
-    fetchFlag(lowerCode, aspectRatio, cacheTTLDays).then((result) => {
-      // Only proceed if the component is still visible
-      if (!isMounted) return;
+    fetchFlag(lowerCode, aspectRatio, cacheTTLDays, disableCache).then(
+      (result) => {
+        // Only proceed if the component is still visible
+        if (!isMounted) return;
 
-      switch (result.type) {
-        case 'success':
-          setSvgState({ status: 'success', svg: result.svg });
-          onLoadRef.current?.(); // Success!
-          break;
-        case 'offline':
-          setSvgState({ status: 'offline' });
-          // Note: You might not want to call onError for offline
-          // if you're showing a placeholder
-          onErrorRef.current?.('Device is offline');
-          break;
-        case 'error':
-          setSvgState({ status: 'error', svg: result.svg });
-          onErrorRef.current?.('Failed to fetch SVG flag');
-          break;
+        switch (result.type) {
+          case 'success':
+            setSvgState({ status: 'success', svg: result.svg });
+            onLoadRef.current?.(); // Success!
+            break;
+          case 'offline':
+            setSvgState({ status: 'offline' });
+            // Note: You might not want to call onError for offline
+            // if you're showing a placeholder
+            onErrorRef.current?.('Device is offline');
+            break;
+          case 'error':
+            setSvgState({ status: 'error', svg: result.svg });
+            onErrorRef.current?.('Failed to fetch SVG flag');
+            break;
+        }
       }
-    });
+    );
 
     return () => {
       isMounted = false; // Cleanup on unmount
     };
-  }, [lowerCode, useSvg, aspectRatio, cacheTTLDays]);
+  }, [lowerCode, useSvg, aspectRatio, cacheTTLDays, disableCache]);
 
   // ── Emoji mode ──────────────────────────────────────────
   if (!useSvg) {

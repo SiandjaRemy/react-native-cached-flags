@@ -9,24 +9,38 @@
 [![Bundle Size](https://img.shields.io/bundlephobia/minzip/react-native-cached-flags?style=flat-square&color=blue)](https://bundlephobia.com/package/react-native-cached-flags)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com)
 
+**Zero runtime dependencies. Persistent SVG caching. Request deduplication.**
+
+Country flags for React Native — emoji or SVG, always fast.
+
 </div>
 
-# react-native-cached-flags
-
-React Native country flag component with emoji fallback, persistent SVG caching,
-and request deduplication.
-
-Flags are fetched once, cached permanently to device storage, and deduplicated —
-so rendering 50 instances of the same flag triggers exactly **one** network request.
-
 ![Demo](./assets/cached-flags-v1-demo.jpg)
+
+---
+
+## Why this package?
+
+Most flag packages either render emojis (fast but low quality) or fetch SVGs (great quality but wasteful). This package does both — and caches aggressively:
+
+- **Emoji mode** — zero network requests, instant render
+- **SVG mode** — fetches once, stores to device storage permanently, never hits the network again for that flag
+- **Deduplication** — rendering 50 of the same flag simultaneously fires exactly 1 network request
+- **Zero runtime dependencies** — emoji generation is built-in, no extra packages pulled into your app
 
 ---
 
 ## Installation
 
 ```bash
+# npm
 npm install react-native-cached-flags
+
+# yarn
+yarn add react-native-cached-flags
+
+# bun
+bun add react-native-cached-flags
 ```
 
 ### Peer dependencies
@@ -44,16 +58,25 @@ npm install react-native-svg @react-native-async-storage/async-storage
 ### Emoji mode (default)
 
 Zero network requests. Renders the platform emoji for the country.
+Accepts ISO 3166-1 alpha-2 codes, IETF language tags, and ISO subdivision codes.
 
 ```tsx
 import { CountryFlag } from 'react-native-cached-flags';
 
-<CountryFlag isoCode="CM" size={32} />;
+// ISO 3166-1 alpha-2
+<CountryFlag isoCode="CM" size={32} />
+
+// IETF language tag
+<CountryFlag isoCode="en-US" size={32} />
+
+// ISO subdivision (renders parent country flag)
+<CountryFlag isoCode="GB-SCT" size={32} />
 ```
 
 ### SVG mode (cached)
 
-Fetches once, caches permanently. Instant on every subsequent render.
+Fetches once, caches permanently to device storage. Instant on every subsequent
+render — even after app restarts.
 
 ```tsx
 <CountryFlag isoCode="CM" size={32} useSvg />
@@ -80,6 +103,14 @@ stale flags are eventually refreshed:
 
 ```tsx
 <CountryFlag isoCode="CM" size={32} useSvg cacheTTLDays={90} />
+```
+
+### Disable caching
+
+Always fetch a fresh flag while still deduplicating simultaneous requests:
+
+```tsx
+<CountryFlag isoCode="CM" size={32} useSvg disableCache />
 ```
 
 ### Load and error callbacks
@@ -112,19 +143,31 @@ await preloadFlags(['US', 'CM', 'FR', 'DE', 'JP'], {
 
 ## Props
 
-| Prop               | Type                        | Default     | Description                                            |
-| ------------------ | --------------------------- | ----------- | ------------------------------------------------------ |
-| `isoCode`          | `string`                    | —           | ISO 3166-1 alpha-2 code e.g. `"US"`, `"CM"`, `"FR"`    |
-| `size`             | `number`                    | —           | Width in dp — height derived from aspect ratio         |
-| `useSvg`           | `boolean`                   | `false`     | Use SVG with persistent cache instead of emoji         |
-| `aspectRatio`      | `'4:3' \| '1:1'`            | `'4:3'`     | Aspect ratio of the rendered flag                      |
-| `useFallbackEmoji` | `boolean`                   | `false`     | Show emoji if offline and flag not yet cached          |
-| `cacheTTLDays`     | `number`                    | `undefined` | Days before a cached flag expires and is re-fetched    |
-| `placeholderColor` | `string`                    | `'#E5E7EB'` | Background color shown while SVG is loading            |
-| `borderRadius`     | `number`                    | `0`         | Corner radius on the flag container                    |
-| `onLoad`           | `() => void`                | —           | Called when SVG renders successfully                   |
-| `onError`          | `(message: string) => void` | —           | Called when flag fails to load, with error description |
-| `testID`           | `string`                    | —           | Test ID for automated testing                          |
+| Prop               | Type                        | Default     | Description                                                       |
+| ------------------ | --------------------------- | ----------- | ----------------------------------------------------------------- |
+| `isoCode`          | `string`                    | —           | ISO 3166-1 alpha-2, IETF tag (`en-US`), or subdivision (`GB-SCT`) |
+| `size`             | `number`                    | —           | Width in dp — height derived from aspect ratio                    |
+| `useSvg`           | `boolean`                   | `false`     | Use SVG with persistent cache instead of emoji                    |
+| `aspectRatio`      | `'4:3' \| '1:1'`            | `'4:3'`     | Aspect ratio of the rendered flag                                 |
+| `useFallbackEmoji` | `boolean`                   | `false`     | Show emoji if offline and flag not yet cached                     |
+| `cacheTTLDays`     | `number`                    | `undefined` | Days before a cached flag expires and is re-fetched               |
+| `disableCache`     | `boolean`                   | `false`     | Skip cache — always fetch fresh (deduplication still applies)     |
+| `placeholderColor` | `string`                    | `'#E5E7EB'` | Background color shown while SVG is loading                       |
+| `borderRadius`     | `number`                    | `0`         | Corner radius on the flag container                               |
+| `onLoad`           | `() => void`                | —           | Called when SVG renders successfully                              |
+| `onError`          | `(message: string) => void` | —           | Called when flag fails to load, with error description            |
+| `testID`           | `string`                    | —           | Test ID for automated testing                                     |
+
+---
+
+## Accepted `isoCode` formats
+
+| Format             | Example                         | Result                     |
+| ------------------ | ------------------------------- | -------------------------- |
+| ISO 3166-1 alpha-2 | `"US"`, `"CM"`, `"FR"`          | Direct match               |
+| IETF language tag  | `"en-US"`, `"pt-BR"`, `"zh-CN"` | Region subtag extracted    |
+| ISO subdivision    | `"GB-SCT"`, `"GB-ENG"`          | Parent country used (`🇬🇧`) |
+| Bare language tag  | `"pl"`, `"en"`                  | Falls back to `🏳️`         |
 
 ---
 
@@ -147,9 +190,9 @@ network request. All instances share the in-flight promise and render together
 when it resolves.
 
 ```tsx
-// These 20 components trigger exactly 1 network request between them
+// 50 renders → exactly 1 network request
 {
-  Array.from({ length: 20 }).map((_, i) => (
+  Array.from({ length: 50 }).map((_, i) => (
     <CountryFlag key={i} isoCode="CM" size={32} useSvg />
   ));
 }
@@ -163,6 +206,7 @@ when it resolves.
 import {
   preloadFlags,
   clearFlagCache,
+  clearAllFlagVariants,
   clearAllFlagCache,
   getCachedFlagsCount,
   getCacheSizeKB,
@@ -173,10 +217,13 @@ import {
 // Preload a set of flags into cache before rendering
 await preloadFlags(['US', 'CM', 'FR'], { aspectRatio: '4:3', ttlDays: 30 });
 
-// Remove a single country from cache
-await clearFlagCache('CM');
+// Remove one flag for a specific aspect ratio
+await clearFlagCache('CM', '4:3');
 
-// Clear everything
+// Remove all cached variants of a flag (all aspect ratios)
+await clearAllFlagVariants('CM');
+
+// Clear the entire cache
 await clearAllFlagCache();
 
 // Cache stats
@@ -190,6 +237,59 @@ resetNetworkFetchCount();
 
 ---
 
+## `useCacheStats` hook
+
+Reactive hook that automatically reflects cache state. Eliminates manual
+refresh calls.
+
+```tsx
+import { useCacheStats } from 'react-native-cached-flags';
+
+// Manual refresh (Recommended)
+const { count, sizeKB, fetchCount, loading, refresh } = useCacheStats();
+
+// Auto-polling every 2 seconds
+const { count, sizeKB, fetchCount } = useCacheStats({ pollIntervalMs: 2000 });
+
+// With clearAndRefresh helper
+const { clearAndRefresh } = useCacheStats();
+await clearAndRefresh('CM'); // clears all CM variants and refreshes stats
+```
+
+| Field             | Type                                 | Description                              |
+| ----------------- | ------------------------------------ | ---------------------------------------- |
+| `count`           | `number`                             | Number of flags currently in cache       |
+| `sizeKB`          | `number`                             | Total cache size in KB                   |
+| `fetchCount`      | `number`                             | Network requests made this session       |
+| `loading`         | `boolean`                            | Whether stats are being loaded           |
+| `refresh`         | `() => Promise<void>`                | Manually trigger a stats refresh         |
+| `clearAndRefresh` | `(isoCode: string) => Promise<void>` | Clear all variants of a flag and refresh |
+
+---
+
+## Emoji generation
+
+Flag emojis are generated natively — no external dependency required.
+Uses Unicode regional indicator symbols (`U+1F1E6`–`U+1F1FF`).
+
+```tsx
+import {
+  countryCodeToFlagEmoji,
+  extractCountryCode,
+} from 'react-native-cached-flags';
+
+countryCodeToFlagEmoji('US'); // '🇺🇸'
+countryCodeToFlagEmoji('en-US'); // '🇺🇸'
+countryCodeToFlagEmoji('GB-SCT'); // '🇬🇧'
+countryCodeToFlagEmoji('pl'); // null
+
+extractCountryCode('en-US'); // 'US'
+extractCountryCode('GB-SCT'); // 'GB'
+extractCountryCode('pl'); // null
+```
+
+---
+
 ## How caching works
 
 ```
@@ -198,7 +298,8 @@ Simultaneous renders →  deduplicated →  1 fetch shared across all instances
 All future renders   →  cache hit    →  instant, no network
 After app restart    →  cache hit    →  still instant (persisted to disk)
 TTL expired          →  cache miss   →  re-fetches fresh copy from CDN
-Offline, no cache    →  placeholder or emoji fallback (never caches failures)
+disableCache=true    →  skip cache   →  always fresh, still deduplicated
+Offline, no cache    →  placeholder or emoji fallback (failures never cached)
 ```
 
 SVG flags are sourced from [flagicons.lipis.dev](https://flagicons.lipis.dev) —
@@ -208,9 +309,20 @@ all flags share a consistent aspect ratio so they align perfectly side by side.
 
 ## Changelog
 
+### [1.1.0]
+
+- Removed `country-code-to-flag-emoji` dependency — zero runtime dependencies
+- Built-in emoji generation from Unicode regional indicator symbols
+- Accepts IETF language tags (`en-US`, `pt-BR`) and ISO subdivision codes (`GB-SCT`)
+- Added `disableCache` prop — always fetch fresh while deduplication still applies
+- Added `clearAllFlagVariants` utility — remove all aspect ratio variants for one flag
+- Added `useCacheStats` hook with optional polling and `clearAndRefresh` helper
+- Fixed cache key double-building bug (cache now works correctly for all aspect ratios)
+- Fixed `clearAllFlagVariants` case sensitivity bug
+
 ### [1.0.0]
 
-- Added request deduplication — N simultaneous renders of the same flag trigger exactly 1 network request
+- Added request deduplication — N simultaneous renders trigger exactly 1 network request
 - Added `cacheTTLDays` prop — optional cache expiry in days
 - Added `onLoad` and `onError` callback props
 - Added `preloadFlags` utility for warming the cache ahead of rendering
