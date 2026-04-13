@@ -17,17 +17,7 @@ jest.mock('react-native-svg', () => ({
   SvgXml: () => null,
 }));
 
-jest.mock('country-code-to-flag-emoji', () => ({
-  __esModule: true,
-  default: (code: string) => {
-    const map: Record<string, string> = {
-      US: '🇺🇸',
-      CM: '🇨🇲',
-      FR: '🇫🇷',
-    };
-    return map[code] ?? null;
-  },
-}));
+// Spy on your new internal utility
 
 // Spy on fetchFlag so we can control its return value per test
 const mockFetchFlag = jest.spyOn(fetchFlagModule, 'fetchFlag');

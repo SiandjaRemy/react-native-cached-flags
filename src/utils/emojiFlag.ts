@@ -18,27 +18,38 @@ export const extractCountryCode = (input: string): string | null => {
 
   const trimmed = input.trim().toUpperCase();
 
-  // Already a clean 2-letter code: 'US', 'CM'
+  // 1. Simple 2-letter case
   if (/^[A-Z]{2}$/.test(trimmed)) {
     return trimmed;
   }
 
-  // ISO subdivision: 'GB-SCT', 'GB-ENG' → take the country part
-  if (/^[A-Z]{2}-[A-Z0-9]{1,3}$/.test(trimmed)) {
-    return trimmed.slice(0, 2);
+  // 2. Hyphenated case (IETF or Subdivisions)
+  if (trimmed.includes('-')) {
+    const parts = trimmed.split('-');
+    const first = parts[0];
+    const second = parts[1];
+
+    // Priority 1: If the FIRST part is a valid country (e.g., GB-SCT, US-CA)
+    // we want the country code (GB or US).
+    if (first && VALID_COUNTRY_CODES.has(first)) {
+      return first;
+    }
+
+    // Priority 2: If the FIRST part isn't a country, check if the SECOND part
+    // is a valid country (e.g., en-US, zh-CN).
+    if (second && VALID_COUNTRY_CODES.has(second)) {
+      return second;
+    }
   }
 
-  // IETF language tag: 'en-US', 'zh-CN', 'pt-BR' → take region subtag
-  // Format: language[-script][-region][-variant]
-  // We want the region subtag which is always 2 uppercase letters
+  // 3. Fallback for complex IETF tags like 'az-Latn-AZ'
   const ietfMatch = trimmed.match(
     /^[A-Z]{2,3}(?:-[A-Z]{4})?-([A-Z]{2})(?:-.*)?$/
   );
-  if (ietfMatch?.[1]) {
-    return ietfMatch[1]!;
+  if (ietfMatch?.[1] && VALID_COUNTRY_CODES.has(ietfMatch[1])) {
+    return ietfMatch[1];
   }
 
-  // Single language tag with no region: 'pl', 'en' → no country code derivable
   return null;
 };
 
