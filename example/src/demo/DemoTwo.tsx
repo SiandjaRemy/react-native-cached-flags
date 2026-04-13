@@ -15,10 +15,9 @@ import {
 import {
   CountryFlag,
   clearAllFlagCache,
-  getCachedFlagsCount,
-  getCacheSizeKB,
   getNetworkFetchCount,
   resetNetworkFetchCount,
+  useCacheStats,
 } from 'react-native-cached-flags';
 import VersionHeader from './components/VersionHeader';
 
@@ -161,21 +160,13 @@ function FlagCard({
 export default function DemoTwo() {
   const [available, setAvailable] = useState(ALL_COUNTRIES);
   const [displayed, setDisplayed] = useState<DisplayedFlag[]>([]);
-  const [cacheCount, setCacheCount] = useState(0);
-  const [cacheSize, setCacheSize] = useState(0);
-  const [fetchCount, setFetchCount] = useState(0);
+
+  const { count, sizeKB, fetchCount, refresh } = useCacheStats();
 
   const fetchCountRef = useRef(0);
 
   const refreshStats = async () => {
-    const [count, size] = await Promise.all([
-      getCachedFlagsCount(),
-      getCacheSizeKB(),
-    ]);
     const fc = getNetworkFetchCount();
-    setCacheCount(count);
-    setCacheSize(size);
-    setFetchCount(fc);
     fetchCountRef.current = fc;
   };
 
@@ -199,6 +190,7 @@ export default function DemoTwo() {
         prev.map((f) => (f.code === code ? { ...f, cacheHit: hit } : f))
       );
       await refreshStats();
+      refresh();
     }, 300);
   };
 
@@ -232,10 +224,10 @@ export default function DemoTwo() {
             await clearAllFlagCache();
             resetNetworkFetchCount();
             fetchCountRef.current = 0;
-            setFetchCount(0);
             setDisplayed([]);
             setAvailable(ALL_COUNTRIES);
             await refreshStats();
+            refresh();
           },
         },
       ]
@@ -295,12 +287,12 @@ export default function DemoTwo() {
         {/* ── Stats ── */}
         <Pressable onPress={refreshStats} style={styles.statsRow}>
           <View style={styles.statCell}>
-            <Text style={styles.statNum}>{cacheCount}</Text>
+            <Text style={styles.statNum}>{count}</Text>
             <Text style={styles.statLabel}>in cache</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statCell}>
-            <Text style={styles.statNum}>{cacheSize} KB</Text>
+            <Text style={styles.statNum}>{sizeKB} KB</Text>
             <Text style={styles.statLabel}>cache size</Text>
           </View>
           <View style={styles.statDivider} />

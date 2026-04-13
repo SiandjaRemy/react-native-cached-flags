@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   ScrollView,
   View,
@@ -13,11 +13,8 @@ import {
 } from 'react-native';
 import {
   CountryFlag,
-  getCachedFlagsCount,
-  getCacheSizeKB,
-  clearFlagCache,
   clearAllFlagCache,
-  getNetworkFetchCount,
+  useCacheStats,
   resetNetworkFetchCount,
 } from 'react-native-cached-flags';
 import VersionHeader from './components/VersionHeader';
@@ -43,26 +40,14 @@ const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 48 - 20) / 3; // 48 padding, 20 gap
 
 export default function DemoOne() {
+  const { count, sizeKB, fetchCount, refresh, clearAndRefresh } =
+    useCacheStats();
+
   const [mode, setMode] = useState<Mode>('emoji');
   const [featuredCountry, setFeaturedCountry] = useState({
     code: 'CM',
     name: 'Cameroon',
   });
-  const [cacheCount, setCacheCount] = useState(0);
-  const [cacheSize, setCacheSize] = useState(0);
-  const [fetchCount, setFetchCount] = useState(0);
-
-  const updateCacheStats = async () => {
-    const count = await getCachedFlagsCount();
-    setCacheCount(count);
-    const size = await getCacheSizeKB();
-    setCacheSize(size);
-    setFetchCount(getNetworkFetchCount());
-  };
-
-  useEffect(() => {
-    updateCacheStats();
-  }, [mode]);
 
   const handleFlagPress = (code: string, name: string) => {
     setFeaturedCountry({ code, name });
@@ -73,10 +58,9 @@ export default function DemoOne() {
 
   const handleModeChange = (modeName: Mode) => {
     setMode(modeName);
-    updateCacheStats();
-    if (modeName === 'emoji') {
-      resetNetworkFetchCount();
-    }
+    // if (modeName === 'emoji') {
+    //   resetNetworkFetchCount();
+    // }
   };
 
   const handleClearAllCache = async () => {
@@ -91,7 +75,7 @@ export default function DemoOne() {
           onPress: async () => {
             setMode('emoji');
             await clearAllFlagCache();
-            await updateCacheStats();
+            resetNetworkFetchCount();
           },
         },
       ]
@@ -108,8 +92,7 @@ export default function DemoOne() {
           text: 'Remove',
           style: 'destructive',
           onPress: async () => {
-            await clearFlagCache(featuredCountry.code);
-            await updateCacheStats();
+            await clearAndRefresh(featuredCountry.code);
             setMode('emoji');
           },
         },
@@ -253,14 +236,14 @@ export default function DemoOne() {
         </View>
 
         {/* Footer stat bar */}
-        <Pressable onPress={() => updateCacheStats()} style={styles.statBar}>
+        <Pressable onPress={refresh} style={styles.statBar}>
           <View style={styles.stat}>
-            <Text style={styles.statNum}>{cacheCount}</Text>
+            <Text style={styles.statNum}>{count}</Text>
             <Text style={styles.statLabel}>Items cached</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.stat}>
-            <Text style={styles.statNum}>{cacheSize} KB</Text>
+            <Text style={styles.statNum}>{sizeKB} KB</Text>
             <Text style={styles.statLabel}>Cache size</Text>
           </View>
           <View style={styles.statDivider} />
