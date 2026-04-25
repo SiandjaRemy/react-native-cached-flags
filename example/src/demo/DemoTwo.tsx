@@ -15,6 +15,7 @@ import {
 import {
   CountryFlag,
   clearAllFlagCache,
+  countryCodeToFlagEmoji,
   getNetworkFetchCount,
   resetNetworkFetchCount,
   useCacheStats,
@@ -352,6 +353,9 @@ export default function DemoTwo() {
               onPress={() => handleCountryPress(c.code, c.name)}
               activeOpacity={0.6}
             >
+              <Text style={styles.countryCode}>
+                {countryCodeToFlagEmoji(c.code)}
+              </Text>
               <Text style={styles.countryCode}>{c.code}</Text>
               <Text style={styles.countryName}>{c.name}</Text>
               <Text style={styles.countryPlus}>+</Text>

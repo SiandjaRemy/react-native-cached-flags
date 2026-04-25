@@ -1,83 +1,82 @@
 import { useEffect, useState } from 'react';
-import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import {
+  View,
+  TouchableOpacity,
+  Text,
+  StyleSheet,
+  Platform,
+} from 'react-native';
 import DemoOne from './demo/DemoOne';
 import DemoTwo from './demo/DemoTwo';
 import DemoThree from './demo/DemoThree';
+import DemoWeb from './demo/DemoWeb';
 import { preloadFlags } from 'react-native-cached-flags';
 
 const ACCENT = '#C8F04A';
+const ORANGE = '#FB923C';
 const BG = '#0A0A0F';
 const SURFACE = '#13131A';
 const BORDER = '#2A2A3A';
 const MUTED = '#6B6B80';
 
+type Tab = 'one' | 'two' | 'three' | 'web';
+
 export default function App() {
-  const [tab, setTab] = useState<'one' | 'two' | 'three'>('three');
+  const [tab, setTab] = useState<Tab>('one');
 
   useEffect(() => {
+    // Only preload on native — no AsyncStorage on web
+    if (Platform.OS === 'web') return;
+
     const initializeApp = async () => {
       try {
-        console.log('[Demo] Preloading flags...');
-
-        // Preload common flags used across your three demos
         await preloadFlags(['US', 'CM', 'FR', 'DE', 'GB', 'CA', 'JP'], {
           aspectRatio: '4:3',
-          ttlDays: 7, // Optional: Refresh every week
+          ttlDays: 7,
         });
-
-        console.log('[Demo] Flags cached successfully!');
       } catch (error) {
         console.error('[Demo] Preload failed:', error);
       }
     };
 
     initializeApp();
-  }, []); // Run once on mount
+  }, []);
+
+  const tabs: { key: Tab; label: string; accentColor: string }[] = [
+    { key: 'one', label: '🚩 Flags', accentColor: ACCENT },
+    { key: 'two', label: '⚡ Dedup', accentColor: ACCENT },
+    { key: 'three', label: '📊 Stats', accentColor: ACCENT },
+    { key: 'web', label: '🌐 Web', accentColor: ORANGE },
+  ];
 
   return (
     <View style={styles.container}>
       {tab === 'one' && <DemoOne />}
       {tab === 'two' && <DemoTwo />}
       {tab === 'three' && <DemoThree />}
+      {tab === 'web' && <DemoWeb />}
 
-      {/* Bottom tab bar */}
       <View style={styles.tabBar}>
-        <TouchableOpacity
-          style={[styles.tab, tab === 'one' && styles.tabActive]}
-          onPress={() => setTab('one')}
-        >
-          <Text style={[styles.tabText, tab === 'one' && styles.tabTextActive]}>
-            Demo One
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, tab === 'two' && styles.tabActive]}
-          onPress={() => setTab('two')}
-        >
-          <Text style={[styles.tabText, tab === 'two' && styles.tabTextActive]}>
-            Demo Two
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, tab === 'three' && styles.tabActive]}
-          onPress={() => setTab('three')}
-        >
-          <Text
-            style={[styles.tabText, tab === 'three' && styles.tabTextActive]}
+        {tabs.map(({ key, label, accentColor }) => (
+          <TouchableOpacity
+            key={key}
+            style={[styles.tab, tab === key && styles.tabTextActive]}
+            onPress={() => setTab(key)}
           >
-            Demo Three
-          </Text>
-        </TouchableOpacity>
+            <Text
+              style={[styles.tabText, tab === key && { color: accentColor }]}
+            >
+              {label}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: BG,
-  },
+  container: { flex: 1, backgroundColor: BG },
   tabBar: {
     flexDirection: 'row',
     backgroundColor: SURFACE,
@@ -90,16 +89,13 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: 'center',
   },
-  tabActive: {
-    borderTopWidth: 2,
-    borderTopColor: ACCENT,
-  },
   tabText: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '600',
     color: MUTED,
   },
   tabTextActive: {
-    color: ACCENT,
+    borderTopWidth: 2,
+    borderTopColor: ACCENT,
   },
 });

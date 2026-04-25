@@ -21,7 +21,8 @@ Country flags for React Native — emoji or SVG, always fast.
 
 ## Why this package?
 
-Most flag packages either render emojis (fast but low quality) or fetch SVGs (great quality but wasteful). This package does both — and caches aggressively:
+Most flag packages either render emojis (fast but low quality) or fetch SVGs
+(great quality but wasteful). This package does both — and caches aggressively:
 
 - **Emoji mode** — zero network requests, instant render
 - **SVG mode** — fetches once, stores to device storage permanently, never hits the network again for that flag
@@ -200,6 +201,102 @@ when it resolves.
 
 ---
 
+## Web & cross-platform usage — `getFlagUrl`
+
+The `CountryFlag` component renders SVGs using `react-native-svg`, which is
+native-only. For web contexts — React, Next.js, or any non-native environment —
+use `getFlagUrl` to get the CDN URL directly and render it however you need.
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                                                         │
+│   isoCode / IETF tag / subdivision                      │
+│            │                                            │
+│            ▼                                            │
+│      getFlagUrl('CM', { aspectRatio: '4:3' })           │
+│            │                                            │
+│            ▼                                            │
+│   'https://flagicons.lipis.dev/flags/4x3/cm.svg'        │
+│            │                                            │
+│     ┌──────┴──────────────────────┐                     │
+│     │                             │                     │
+│     ▼                             ▼                     │
+│  <img src={url} />         <Image src={url} />          │
+│  (React / web)             (Next.js)                    │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+```tsx
+import { getFlagUrl } from 'react-native-cached-flags';
+import { Platform } from 'react-native';
+import { SvgUri } from 'react-native-svg';
+
+// Get the URL
+const url = getFlagUrl('CM'); // '...flags/4x3/cm.svg'
+const squareUrl = getFlagUrl('CM', { aspectRatio: '1:1' }); // '...flags/1x1/cm.svg'
+const fromTag = getFlagUrl('en-US'); // '...flags/4x3/us.svg'
+const fromSub = getFlagUrl('GB-SCT'); // '...flags/4x3/gb.svg'
+const invalid = getFlagUrl('pl'); // null
+
+// React Native — use CountryFlag (cached) or SvgUri (uncached)
+if (Platform.OS !== 'web') {
+  return <CountryFlag isoCode="CM" size={32} useSvg />;
+}
+
+// Web — use a standard img tag
+if (url) {
+  return <img src={url} width={40} height={30} alt="Cameroon flag" />;
+}
+```
+
+### Platform-conditional pattern
+
+For codebases targeting both native and web:
+
+```tsx
+import { Platform } from 'react-native';
+import { CountryFlag, getFlagUrl } from 'react-native-cached-flags';
+
+function Flag({ isoCode, size }: { isoCode: string; size: number }) {
+  if (Platform.OS === 'web') {
+    const url = getFlagUrl(isoCode);
+    if (!url) return null;
+    return (
+      <img
+        src={url}
+        width={size}
+        height={size * 0.75}
+        alt={`${isoCode} flag`}
+        style={{ borderRadius: 4, objectFit: 'cover' }}
+      />
+    );
+  }
+
+  return <CountryFlag isoCode={isoCode} size={size} useSvg />;
+}
+```
+
+### Next.js example
+
+```tsx
+import Image from 'next/image';
+import { getFlagUrl } from 'react-native-cached-flags';
+
+export function FlagImage({ isoCode }: { isoCode: string }) {
+  const url = getFlagUrl(isoCode);
+  if (!url) return null;
+
+  return <Image src={url} width={40} height={30} alt={`${isoCode} flag`} />;
+}
+```
+
+> **Note:** `getFlagUrl` returns a URL only — no caching, no deduplication.
+> On native, prefer `CountryFlag` with `useSvg` for the full caching benefits.
+> On web, your browser's HTTP cache handles repeated requests automatically.
+
+---
+
 ## Cache utilities
 
 ```tsx
@@ -245,7 +342,7 @@ refresh calls.
 ```tsx
 import { useCacheStats } from 'react-native-cached-flags';
 
-// Manual refresh (Recommended)
+// Manual refresh
 const { count, sizeKB, fetchCount, loading, refresh } = useCacheStats();
 
 // Auto-polling every 2 seconds
@@ -300,6 +397,7 @@ After app restart    →  cache hit    →  still instant (persisted to disk)
 TTL expired          →  cache miss   →  re-fetches fresh copy from CDN
 disableCache=true    →  skip cache   →  always fresh, still deduplicated
 Offline, no cache    →  placeholder or emoji fallback (failures never cached)
+Web (getFlagUrl)     →  URL only     →  browser HTTP cache handles repeats
 ```
 
 SVG flags are sourced from [flagicons.lipis.dev](https://flagicons.lipis.dev) —
@@ -308,6 +406,10 @@ all flags share a consistent aspect ratio so they align perfectly side by side.
 ---
 
 ## Changelog
+
+### [1.2.0]
+
+- Added `getFlagUrl` utility for web and cross-platform usage
 
 ### [1.1.0]
 

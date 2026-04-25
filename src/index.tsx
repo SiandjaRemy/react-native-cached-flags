@@ -17,4 +17,7 @@ export type { CacheStats } from './hooks/useCacheStats';
 
 export { countryCodeToFlagEmoji, extractCountryCode } from './utils/emojiFlag';
 
+export { getFlagUrl } from './utils/getFlagUrl';
+export type { GetFlagUrlOptions } from './utils/getFlagUrl';
+
 export type { CountryFlagProps } from './types';
