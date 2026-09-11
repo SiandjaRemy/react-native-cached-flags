@@ -179,6 +179,7 @@ export default function DemoOne() {
               size={120}
               useSvg={mode === 'svg'}
               borderRadius={12}
+              aspectRatio="1:1"
             />
           </View>
           <View style={styles.featuredInfo}>

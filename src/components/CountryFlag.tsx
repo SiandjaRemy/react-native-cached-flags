@@ -5,6 +5,7 @@ import { fetchFlag } from '../utils/fetchFlag';
 import { ASPECT_RATIOS, DEFAULT_FLAG_SVG } from '../constants/defaults';
 import type { CountryFlagProps } from '../types';
 import { countryCodeToFlagEmoji } from '../utils/emojiFlag';
+import { useCachedFlagsConfig } from '../context/CachedFlagsContext';
 
 type SvgState =
   | { status: 'loading' }
@@ -15,17 +16,28 @@ type SvgState =
 export const CountryFlag = ({
   isoCode,
   size,
+  // Each prop is optional — falls back to config, then to default
   useSvg = false,
-  aspectRatio = '4:3',
-  useFallbackEmoji = false,
-  placeholderColor = '#E5E7EB',
+  aspectRatio,
+  useFallbackEmoji,
   cacheTTLDays,
-  disableCache = false,
-  borderRadius = 0,
+  disableCache,
+  placeholderColor,
+  borderRadius,
   onLoad,
   onError,
   testID,
 }: CountryFlagProps) => {
+  const config = useCachedFlagsConfig();
+
+  // Resolved values: prop → context config → global config → hardcoded default
+  const resolvedAspectRatio = aspectRatio ?? config.aspectRatio;
+  const resolvedFallbackEmoji = useFallbackEmoji ?? config.useFallbackEmoji;
+  const resolvedTTL = cacheTTLDays ?? config.cacheTTLDays;
+  const resolvedDisableCache = disableCache ?? config.disableCache;
+  const resolvedPlaceholder = placeholderColor ?? config.placeholderColor;
+  const resolvedBorderRadius = borderRadius ?? config.borderRadius;
+
   const [svgState, setSvgState] = useState<SvgState>({ status: 'loading' });
 
   // Simple primitives: NO memoization ──
@@ -34,20 +46,24 @@ export const CountryFlag = ({
   // Layout & Styles: YES memoization ──
   // This prevents the Native UI thread from re-calculating layout unnecessarily
   const dimensions = useMemo(() => {
-    const heightRatio = ASPECT_RATIOS[aspectRatio] ?? 0.75;
+    const heightRatio = ASPECT_RATIOS[resolvedAspectRatio] ?? 0.75;
     return {
       width: size,
       height: size * heightRatio,
       emojiSize: size * 0.75,
     };
-  }, [size, aspectRatio]);
+  }, [size, resolvedAspectRatio]);
 
   const containerStyle = useMemo(
     () => [
       styles.container,
-      { width: dimensions.width, height: dimensions.height, borderRadius },
+      {
+        width: dimensions.width,
+        height: dimensions.height,
+        resolvedBorderRadius,
+      },
     ],
-    [dimensions.width, dimensions.height, borderRadius]
+    [dimensions.width, dimensions.height, resolvedBorderRadius]
   );
 
   const placeholderStyle = useMemo(
@@ -56,11 +72,16 @@ export const CountryFlag = ({
       {
         width: dimensions.width,
         height: dimensions.height,
-        backgroundColor: placeholderColor,
-        borderRadius,
+        backgroundColor: resolvedPlaceholder,
+        resolvedBorderRadius,
       },
     ],
-    [dimensions.width, dimensions.height, placeholderColor, borderRadius]
+    [
+      dimensions.width,
+      dimensions.height,
+      resolvedPlaceholder,
+      resolvedBorderRadius,
+    ]
   );
 
   // Logic & Effects (Bulletproofed) ──
@@ -88,34 +109,43 @@ export const CountryFlag = ({
       return;
     }
 
-    fetchFlag(lowerCode, aspectRatio, cacheTTLDays, disableCache).then(
-      (result) => {
-        // Only proceed if the component is still visible
-        if (!isMounted) return;
+    fetchFlag(
+      lowerCode,
+      resolvedAspectRatio,
+      resolvedTTL,
+      resolvedDisableCache
+    ).then((result) => {
+      // Only proceed if the component is still visible
+      if (!isMounted) return;
 
-        switch (result.type) {
-          case 'success':
-            setSvgState({ status: 'success', svg: result.svg });
-            onLoadRef.current?.(); // Success!
-            break;
-          case 'offline':
-            setSvgState({ status: 'offline' });
-            // Note: You might not want to call onError for offline
-            // if you're showing a placeholder
-            onErrorRef.current?.('Device is offline');
-            break;
-          case 'error':
-            setSvgState({ status: 'error', svg: result.svg });
-            onErrorRef.current?.('Failed to fetch SVG flag');
-            break;
-        }
+      switch (result.type) {
+        case 'success':
+          setSvgState({ status: 'success', svg: result.svg });
+          onLoadRef.current?.(); // Success!
+          break;
+        case 'offline':
+          setSvgState({ status: 'offline' });
+          // Note: You might not want to call onError for offline
+          // if you're showing a placeholder
+          onErrorRef.current?.('Device is offline');
+          break;
+        case 'error':
+          setSvgState({ status: 'error', svg: result.svg });
+          onErrorRef.current?.('Failed to fetch SVG flag');
+          break;
       }
-    );
+    });
 
     return () => {
       isMounted = false; // Cleanup on unmount
     };
-  }, [lowerCode, useSvg, aspectRatio, cacheTTLDays, disableCache]);
+  }, [
+    lowerCode,
+    useSvg,
+    resolvedAspectRatio,
+    resolvedTTL,
+    resolvedDisableCache,
+  ]);
 
   // ── Emoji mode ──────────────────────────────────────────
   if (!useSvg) {
@@ -124,7 +154,7 @@ export const CountryFlag = ({
   }
 
   // ── Offline + fallback emoji enabled ─────────────────────
-  if (svgState.status === 'offline' && useFallbackEmoji) {
+  if (svgState.status === 'offline' && resolvedFallbackEmoji) {
     const emoji = countryCodeToFlagEmoji(isoCode) || '🏳️';
     return <Text style={{ fontSize: dimensions.emojiSize }}>{emoji}</Text>;
   }

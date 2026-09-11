@@ -1,5 +1,10 @@
 export { CountryFlag } from './components/CountryFlag';
 export {
+  CachedFlagsProvider,
+  useCachedFlagsConfig,
+} from './context/CachedFlagsContext';
+export type { CachedFlagsConfig } from './config';
+export {
   clearFlagCache,
   clearAllFlagVariants,
   clearAllFlagCache,

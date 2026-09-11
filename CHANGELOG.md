@@ -1,5 +1,14 @@
 ## Changelog
 
+### [2.0.0]
+
+- Added `CachedFlagsProvider` — set app-wide defaults at the root, override per-instance
+- Added `configureCachedFlags()` — module-level config for utilities outside the React tree
+- Added `useCachedFlagsConfig` hook — read active config from anywhere in the tree
+- Added `cdnBaseUrl` config option — use your own CDN or self-hosted flag assets
+- All `CountryFlag` props now read from provider config when not explicitly set
+- Provider is fully opt-in — no breaking changes to existing usage
+
 ### [1.2.0]
 
 - Added `getFlagUrl` utility for web and cross-platform usage
@@ -45,3 +54,5 @@
 - `CountryFlag` component with emoji and SVG modes
 - Persistent SVG caching via AsyncStorage
 - `clearFlagCache`, `clearAllFlagCache`
+
+---

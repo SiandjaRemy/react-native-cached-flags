@@ -9,7 +9,7 @@
 [![Bundle Size](https://img.shields.io/bundlephobia/minzip/react-native-cached-flags?style=flat-square&color=blue)](https://bundlephobia.com/package/react-native-cached-flags)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com)
 
-**Zero runtime dependencies. Persistent SVG caching. Request deduplication.**
+**Zero runtime dependencies. Persistent SVG caching. Request deduplication. Global config.**
 
 Country flags for React Native — emoji or SVG, always fast.
 
@@ -27,6 +27,7 @@ Most flag packages either render emojis (fast but low quality) or fetch SVGs
 - **Emoji mode** — zero network requests, instant render
 - **SVG mode** — fetches once, stores to device storage permanently, never hits the network again for that flag
 - **Deduplication** — rendering 50 of the same flag simultaneously fires exactly 1 network request
+- **Global config** — set defaults once at the app root, override per-instance when needed
 - **Zero runtime dependencies** — emoji generation is built-in, no extra packages pulled into your app
 
 ---
@@ -47,10 +48,168 @@ bun add react-native-cached-flags
 ### Peer dependencies
 
 ```bash
+# npm
 npm install react-native-svg @react-native-async-storage/async-storage
+
+# yarn
+yarn add react-native-svg @react-native-async-storage/async-storage
 ```
 
 > For Expo projects use `npx expo install` to get compatible versions.
+
+---
+
+## Quick start
+
+```tsx
+import { CachedFlagsProvider, CountryFlag } from 'react-native-cached-flags';
+
+// 1. Wrap your app with the provider (optional but recommended)
+export default function App() {
+  return (
+    <CachedFlagsProvider
+      config={{
+        aspectRatio: '4:3',
+        cacheTTLDays: 30,
+        useFallbackEmoji: true,
+      }}
+    >
+      <YourApp />
+    </CachedFlagsProvider>
+  );
+}
+
+// 2. Use CountryFlag anywhere — inherits config automatically
+<CountryFlag isoCode="CM" size={32} useSvg />;
+```
+
+The provider is **optional** — existing usage without it works exactly as before.
+
+---
+
+## Global configuration — `CachedFlagsProvider`
+
+Set app-wide defaults once at the root. Every `CountryFlag` instance inherits
+them automatically. Per-instance props always override.
+
+```tsx
+import { CachedFlagsProvider } from 'react-native-cached-flags';
+
+// App.tsx / _layout.tsx (Expo Router)
+export default function RootLayout() {
+  return (
+    <CachedFlagsProvider
+      config={{
+        aspectRatio: '1:1', // all flags square by default
+        cacheTTLDays: 30, // refresh monthly
+        useFallbackEmoji: true, // show emoji when offline
+        placeholderColor: '#F3F4F6', // custom loading color
+        borderRadius: 4, // rounded corners everywhere
+      }}
+    >
+      <Stack />
+    </CachedFlagsProvider>
+  );
+}
+```
+
+### Custom CDN
+
+For corporate environments or self-hosted flag assets:
+
+```tsx
+<CachedFlagsProvider
+  config={{
+    cdnBaseUrl: 'https://mycdn.company.com/flags/4x3',
+  }}
+>
+  <App />
+</CachedFlagsProvider>
+```
+
+### Config without a provider
+
+For utilities called outside the React tree (`preloadFlags`, `getFlagUrl`),
+set module-level config directly:
+
+```tsx
+import { configureCachedFlags } from 'react-native-cached-flags';
+
+// Call once at app startup, before any flag rendering
+configureCachedFlags({
+  cdnBaseUrl: 'https://mycdn.company.com/flags/4x3',
+  aspectRatio: '1:1',
+  cacheTTLDays: 30,
+});
+```
+
+### Config resolution order
+
+```
+Per-instance prop        →  highest priority, always wins
+    ↓ (if not set)
+CachedFlagsProvider      →  app-wide defaults
+    ↓ (if no provider)
+configureCachedFlags()   →  module-level defaults (for utilities)
+    ↓ (if not called)
+Built-in defaults        →  aspectRatio: '4:3', disableCache: false, etc.
+```
+
+### All configurable options
+
+| Option             | Type             | Default     | Description                                             |
+| ------------------ | ---------------- | ----------- | ------------------------------------------------------- |
+| `cdnBaseUrl`       | `string`         | lipis CDN   | Base URL for SVG flag assets                            |
+| `aspectRatio`      | `'4:3' \| '1:1'` | `'4:3'`     | Default aspect ratio for all flags                      |
+| `placeholderColor` | `string`         | `'#E5E7EB'` | Default loading placeholder color                       |
+| `borderRadius`     | `number`         | `0`         | Default corner radius                                   |
+| `cacheTTLDays`     | `number`         | `undefined` | Default cache expiry in days                            |
+| `disableCache`     | `boolean`        | `false`     | Skip cache by default (deduplication still applies)     |
+| `useFallbackEmoji` | `boolean`        | `false`     | Show emoji when offline and flag not cached, by default |
+
+---
+
+## `useCachedFlagsConfig` hook
+
+Read the active config from anywhere inside the provider tree. Useful for
+building custom components that respect global config without prop threading.
+
+```tsx
+import { useCachedFlagsConfig } from 'react-native-cached-flags';
+
+// Read active config
+function MyCustomFlag({ isoCode }: { isoCode: string }) {
+  const config = useCachedFlagsConfig();
+
+  // Derive layout from configured aspect ratio
+  const width = 48;
+  const height = config.aspectRatio === '1:1' ? width : width * 0.75;
+
+  return (
+    <View style={{ width, height }}>
+      <CountryFlag isoCode={isoCode} size={width} useSvg />
+    </View>
+  );
+}
+
+// Debug active config in development
+function DevConfigInspector() {
+  const config = useCachedFlagsConfig();
+  if (!__DEV__) return null;
+
+  return (
+    <View>
+      {Object.entries(config).map(([key, value]) => (
+        <Text key={key}>
+          {key}: {String(value ?? 'undefined')}
+        </Text>
+      ))}
+    </View>
+  );
+}
+```
+
+Safe to call without a provider — falls back to module-level or built-in defaults.
 
 ---
 
@@ -137,27 +296,29 @@ await preloadFlags(['US', 'CM', 'FR', 'DE', 'JP'], {
   aspectRatio: '4:3',
   ttlDays: 30,
 });
-// All flags are now cached — rendering will be instant
 ```
 
 ---
 
 ## Props
 
-| Prop               | Type                        | Default     | Description                                                       |
-| ------------------ | --------------------------- | ----------- | ----------------------------------------------------------------- |
-| `isoCode`          | `string`                    | —           | ISO 3166-1 alpha-2, IETF tag (`en-US`), or subdivision (`GB-SCT`) |
-| `size`             | `number`                    | —           | Width in dp — height derived from aspect ratio                    |
-| `useSvg`           | `boolean`                   | `false`     | Use SVG with persistent cache instead of emoji                    |
-| `aspectRatio`      | `'4:3' \| '1:1'`            | `'4:3'`     | Aspect ratio of the rendered flag                                 |
-| `useFallbackEmoji` | `boolean`                   | `false`     | Show emoji if offline and flag not yet cached                     |
-| `cacheTTLDays`     | `number`                    | `undefined` | Days before a cached flag expires and is re-fetched               |
-| `disableCache`     | `boolean`                   | `false`     | Skip cache — always fetch fresh (deduplication still applies)     |
-| `placeholderColor` | `string`                    | `'#E5E7EB'` | Background color shown while SVG is loading                       |
-| `borderRadius`     | `number`                    | `0`         | Corner radius on the flag container                               |
-| `onLoad`           | `() => void`                | —           | Called when SVG renders successfully                              |
-| `onError`          | `(message: string) => void` | —           | Called when flag fails to load, with error description            |
-| `testID`           | `string`                    | —           | Test ID for automated testing                                     |
+| Prop               | Type                        | Default            | Description                                                       |
+| ------------------ | --------------------------- | ------------------ | ----------------------------------------------------------------- |
+| `isoCode`          | `string`                    | —                  | ISO 3166-1 alpha-2, IETF tag (`en-US`), or subdivision (`GB-SCT`) |
+| `size`             | `number`                    | —                  | Width in dp — height derived from aspect ratio                    |
+| `useSvg`           | `boolean`                   | `false`            | Use SVG with persistent cache instead of emoji                    |
+| `aspectRatio`      | `'4:3' \| '1:1'`            | config/`'4:3'`     | Aspect ratio of the rendered flag                                 |
+| `useFallbackEmoji` | `boolean`                   | config/`false`     | Show emoji if offline and flag not yet cached                     |
+| `cacheTTLDays`     | `number`                    | config/`undefined` | Days before a cached flag expires and is re-fetched               |
+| `disableCache`     | `boolean`                   | config/`false`     | Skip cache — always fetch fresh (deduplication still applies)     |
+| `placeholderColor` | `string`                    | config/`'#E5E7EB'` | Background color shown while SVG is loading                       |
+| `borderRadius`     | `number`                    | config/`0`         | Corner radius on the flag container                               |
+| `onLoad`           | `() => void`                | —                  | Called when SVG renders successfully                              |
+| `onError`          | `(message: string) => void` | —                  | Called when flag fails to load, with error description            |
+| `testID`           | `string`                    | —                  | Test ID for automated testing                                     |
+
+Props marked `config/default` read from `CachedFlagsProvider` or
+`configureCachedFlags()` when not set explicitly.
 
 ---
 
@@ -229,30 +390,15 @@ use `getFlagUrl` to get the CDN URL directly and render it however you need.
 
 ```tsx
 import { getFlagUrl } from 'react-native-cached-flags';
-import { Platform } from 'react-native';
-import { SvgUri } from 'react-native-svg';
 
-// Get the URL
 const url = getFlagUrl('CM'); // '...flags/4x3/cm.svg'
 const squareUrl = getFlagUrl('CM', { aspectRatio: '1:1' }); // '...flags/1x1/cm.svg'
 const fromTag = getFlagUrl('en-US'); // '...flags/4x3/us.svg'
 const fromSub = getFlagUrl('GB-SCT'); // '...flags/4x3/gb.svg'
-const invalid = getFlagUrl('pl'); // null
-
-// React Native — use CountryFlag (cached) or SvgUri (uncached)
-if (Platform.OS !== 'web') {
-  return <CountryFlag isoCode="CM" size={32} useSvg />;
-}
-
-// Web — use a standard img tag
-if (url) {
-  return <img src={url} width={40} height={30} alt="Cameroon flag" />;
-}
+const invalid = getFlagUrl('pl'); // null — always check!
 ```
 
 ### Platform-conditional pattern
-
-For codebases targeting both native and web:
 
 ```tsx
 import { Platform } from 'react-native';
@@ -272,7 +418,6 @@ function Flag({ isoCode, size }: { isoCode: string; size: number }) {
       />
     );
   }
-
   return <CountryFlag isoCode={isoCode} size={size} useSvg />;
 }
 ```
@@ -286,7 +431,6 @@ import { getFlagUrl } from 'react-native-cached-flags';
 export function FlagImage({ isoCode }: { isoCode: string }) {
   const url = getFlagUrl(isoCode);
   if (!url) return null;
-
   return <Image src={url} width={40} height={30} alt={`${isoCode} flag`} />;
 }
 ```
